@@ -23,6 +23,7 @@ public partial class Form1 : Form
     private ProxyCandidate? _selectedProxy;
     private bool _startupPromptShown;
     private bool _lastTelegramForeground;
+    private bool _startupUpdateChecked;
 
     public Form1()
     {
@@ -36,6 +37,7 @@ public partial class Form1 : Form
         StickToTelegramIfExists();
         stickTimer.Start();
         _ = LoadLastProxyAsync();
+        _ = CheckUpdatesOnStartupAsync();
     }
 
     private async void pickProxyButton_Click(object? sender, EventArgs e)
@@ -368,6 +370,56 @@ public partial class Form1 : Form
         }
 
         if (string.IsNullOrWhiteSpace(update.ReleaseUrl))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = update.ReleaseUrl,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // noop
+        }
+    }
+
+    private async Task CheckUpdatesOnStartupAsync()
+    {
+        if (_startupUpdateChecked)
+        {
+            return;
+        }
+
+        _startupUpdateChecked = true;
+
+        var versionText = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+        var currentVersion = Version.TryParse(versionText, out var parsed) ? parsed : new Version(1, 0, 0);
+        var update = await _gitHubUpdateService.CheckAsync(
+            AppMetadata.GitHubOwner,
+            AppMetadata.GitHubRepository,
+            currentVersion,
+            CancellationToken.None
+        );
+
+        if (!update.HasNewVersion || string.IsNullOrWhiteSpace(update.ReleaseUrl))
+        {
+            return;
+        }
+
+        var result = MessageBox.Show(
+            this,
+            $"Доступна новая версия: {update.LatestTag}\nОткрыть страницу релиза?",
+            "Обновление",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Information
+        );
+
+        if (result != DialogResult.Yes)
         {
             return;
         }
