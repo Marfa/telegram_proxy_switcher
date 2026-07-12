@@ -6,3 +6,5 @@ obj/
 *.pdb
 *.cache
 *.tmp
+
+.cursor/rules/
