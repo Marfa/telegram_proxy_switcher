@@ -24,7 +24,7 @@ dotnet publish "TelegramLauncher/TelegramLauncher.csproj" -c Release -r win-x64 
 
 ## Версия
 
-Текущая версия: **1.0.0**.
+Текущая версия: **1.1.0**.
 
 ## Источники proxy
 

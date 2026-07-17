@@ -4,6 +4,7 @@ namespace TelegramLauncher.Services;
 
 public sealed class GitHubUpdateService
 {
+    private const string GitHubHost = "github.com";
     private static readonly HttpClient HttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(10)
@@ -11,7 +12,7 @@ public sealed class GitHubUpdateService
 
     static GitHubUpdateService()
     {
-        HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("TGProxy/1.0.0");
+        HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("TGProxy/1.1.0");
     }
 
     public async Task<UpdateCheckResult> CheckAsync(
@@ -43,7 +44,11 @@ public sealed class GitHubUpdateService
                 : string.Empty;
             var releaseUrl = root.TryGetProperty("html_url", out var htmlProperty)
                 ? htmlProperty.GetString() ?? string.Empty
-                : $"https://github.com/{owner}/{repository}/releases";
+                : $"https://{GitHubHost}/{owner}/{repository}/releases";
+            if (!IsTrustedReleaseUrl(releaseUrl, owner, repository))
+            {
+                return UpdateCheckResult.Failed("GitHub вернул недоверенную ссылку релиза.");
+            }
 
             var latestVersion = ParseVersion(tag);
             if (latestVersion is null)
@@ -73,6 +78,27 @@ public sealed class GitHubUpdateService
 
         var normalized = value.Trim().TrimStart('v', 'V');
         return Version.TryParse(normalized, out var version) ? version : null;
+    }
+
+    public static bool IsTrustedReleaseUrl(string releaseUrl, string owner, string repository)
+    {
+        if (!Uri.TryCreate(releaseUrl, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!uri.Host.Equals(GitHubHost, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var expectedPrefix = $"/{owner}/{repository}/releases";
+        return uri.AbsolutePath.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase);
     }
 }
 

@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using TelegramLauncher.Models;
 
@@ -168,12 +170,57 @@ public sealed class ProxySourceService
             return false;
         }
 
+        if (server.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (IPAddress.TryParse(server, out var ipAddress) && !IsPublicAddress(ipAddress))
+        {
+            return false;
+        }
+
         if (!int.TryParse(portRaw, out var port))
         {
             return false;
         }
 
         return port is >= 1 and <= 65535;
+    }
+
+    private static bool IsPublicAddress(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address))
+        {
+            return false;
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetworkV6 && address.IsIPv6LinkLocal)
+        {
+            return false;
+        }
+
+        var bytes = address.GetAddressBytes();
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            return bytes[0] switch
+            {
+                0 => false,
+                10 => false,
+                127 => false,
+                169 when bytes[1] == 254 => false,
+                172 when bytes[1] is >= 16 and <= 31 => false,
+                192 when bytes[1] == 168 => false,
+                _ => true
+            };
+        }
+
+        return address.AddressFamily == AddressFamily.InterNetworkV6
+            && !address.IsIPv6Multicast
+            && !address.IsIPv6SiteLocal
+            && !address.IsIPv6UniqueLocal
+            && !address.IsIPv6LinkLocal
+            && !address.IsIPv6Teredo;
     }
 
     private sealed record SourceDefinition(string Name, string Url, int Priority, int TimeoutSeconds);

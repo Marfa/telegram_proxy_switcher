@@ -128,18 +128,25 @@ public partial class Form1 : Form
             return;
         }
 
+        var tgLink = _selectedProxy.TgLink;
+        if (!IsTrustedTelegramProxyLink(tgLink))
+        {
+            ShowFailureDetails("Получена недоверенная ссылка прокси.");
+            return;
+        }
+
         try
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = _selectedProxy.TgLink,
+                FileName = tgLink,
                 UseShellExecute = true
             });
             SetStatus("Ссылка отправлена в Telegram.");
         }
         catch
         {
-            ShowFailureDetails($"Не удалось открыть ссылку.\n{_selectedProxy.TgLink}");
+            ShowFailureDetails($"Не удалось открыть ссылку.\n{tgLink}");
         }
     }
 
@@ -369,7 +376,11 @@ public partial class Form1 : Form
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(update.ReleaseUrl))
+        if (string.IsNullOrWhiteSpace(update.ReleaseUrl)
+            || !GitHubUpdateService.IsTrustedReleaseUrl(
+                update.ReleaseUrl,
+                AppMetadata.GitHubOwner,
+                AppMetadata.GitHubRepository))
         {
             return;
         }
@@ -406,7 +417,12 @@ public partial class Form1 : Form
             CancellationToken.None
         );
 
-        if (!update.HasNewVersion || string.IsNullOrWhiteSpace(update.ReleaseUrl))
+        if (!update.HasNewVersion
+            || string.IsNullOrWhiteSpace(update.ReleaseUrl)
+            || !GitHubUpdateService.IsTrustedReleaseUrl(
+                update.ReleaseUrl,
+                AppMetadata.GitHubOwner,
+                AppMetadata.GitHubRepository))
         {
             return;
         }
@@ -436,5 +452,19 @@ public partial class Form1 : Form
         {
             // noop
         }
+    }
+
+    private static bool IsTrustedTelegramProxyLink(string tgLink)
+    {
+        if (!Uri.TryCreate(tgLink, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        return uri.Scheme.Equals("tg", StringComparison.OrdinalIgnoreCase)
+            && uri.Host.Equals("proxy", StringComparison.OrdinalIgnoreCase)
+            && uri.Query.Contains("server=", StringComparison.Ordinal)
+            && uri.Query.Contains("port=", StringComparison.Ordinal)
+            && uri.Query.Contains("secret=", StringComparison.Ordinal);
     }
 }

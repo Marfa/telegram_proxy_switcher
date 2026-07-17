@@ -10,5 +10,6 @@ public sealed class ProxyCandidate
 
     public int LatencyMs { get; set; }
 
-    public string TgLink => $"tg://proxy?server={Server}&port={Port}&secret={Secret}";
+    public string TgLink =>
+        $"tg://proxy?server={Uri.EscapeDataString(Server)}&port={Port}&secret={Uri.EscapeDataString(Secret)}";
 }

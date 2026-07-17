@@ -1,6 +1,7 @@
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Sockets;
 using TelegramLauncher.Models;
 
 namespace TelegramLauncher.Services;
@@ -96,6 +97,11 @@ public sealed class ProxyProbeService
 
     private static async Task<int> CheckTcpAsync(string server, int port, int timeoutMs, CancellationToken cancellationToken)
     {
+        if (!await HasPublicAddressAsync(server, cancellationToken))
+        {
+            return -1;
+        }
+
         using var tcpClient = new TcpClient();
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(timeoutMs);
@@ -111,6 +117,54 @@ public sealed class ProxyProbeService
         {
             return -1;
         }
+    }
+
+    private static async Task<bool> HasPublicAddressAsync(string server, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var addresses = await Dns.GetHostAddressesAsync(server, cancellationToken);
+            return addresses.Any(IsPublicAddress);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsPublicAddress(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address))
+        {
+            return false;
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetworkV6 && address.IsIPv6LinkLocal)
+        {
+            return false;
+        }
+
+        var bytes = address.GetAddressBytes();
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            return bytes[0] switch
+            {
+                0 => false,
+                10 => false,
+                127 => false,
+                169 when bytes[1] == 254 => false,
+                172 when bytes[1] is >= 16 and <= 31 => false,
+                192 when bytes[1] == 168 => false,
+                _ => true
+            };
+        }
+
+        return address.AddressFamily == AddressFamily.InterNetworkV6
+            && !address.IsIPv6Multicast
+            && !address.IsIPv6SiteLocal
+            && !address.IsIPv6UniqueLocal
+            && !address.IsIPv6LinkLocal
+            && !address.IsIPv6Teredo;
     }
 
     private static int GetPriorityBucket(ProxyCandidate proxy)

@@ -1,0 +1,20 @@
+#!/bin/sh
+# Install: git config core.hooksPath .githooks
+# Or copy to .git/hooks/pre-commit
+
+GITLEAKS=""
+if command -v gitleaks >/dev/null 2>&1; then
+  GITLEAKS=gitleaks
+elif [ -x "$LOCALAPPDATA/gitleaks/gitleaks.exe" ]; then
+  GITLEAKS="$LOCALAPPDATA/gitleaks/gitleaks.exe"
+elif [ -x "$HOME/.local/bin/gitleaks" ]; then
+  GITLEAKS="$HOME/.local/bin/gitleaks"
+fi
+
+if [ -z "$GITLEAKS" ]; then
+  echo "gitleaks not found — skip secret scan (install: winget install Gitleaks.Gitleaks)"
+  exit 0
+fi
+
+"$GITLEAKS" protect --staged --verbose --config .gitleaks.toml
+exit $?

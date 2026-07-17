@@ -1,0 +1,12 @@
+title = "TelegramLauncher gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "MTProto proxy secrets in source code are protocol data, not repo credentials"
+paths = [
+  '''TelegramLauncher/Models/ProxyCandidate\.cs''',
+  '''TelegramLauncher/Services/ProxySourceService\.cs''',
+  '''TelegramLauncher/Services/ProxyProbeService\.cs''',
+]
