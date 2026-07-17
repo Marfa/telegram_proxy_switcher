@@ -9,7 +9,7 @@ on:
 jobs:
   dependency-audit:
     name: Dependency audit
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -22,13 +22,14 @@ jobs:
         run: dotnet restore TelegramLauncher/TelegramLauncher.csproj
 
       - name: Check vulnerable packages
+        shell: pwsh
         run: |
-          output=$(dotnet list TelegramLauncher/TelegramLauncher.csproj package --vulnerable --include-transitive 2>&1)
-          echo "$output"
-          if echo "$output" | grep -qi "has the following vulnerable packages"; then
-            echo "::error::Vulnerable NuGet packages found"
+          $output = dotnet list TelegramLauncher/TelegramLauncher.csproj package --vulnerable --include-transitive 2>&1 | Out-String
+          Write-Output $output
+          if ($output -match 'has the following vulnerable packages') {
+            Write-Error 'Vulnerable NuGet packages found'
             exit 1
-          fi
+          }
 
       - name: Build
         run: dotnet build TelegramLauncher/TelegramLauncher.csproj --no-restore -c Release
