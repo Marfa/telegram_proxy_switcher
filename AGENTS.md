@@ -31,13 +31,21 @@ dotnet list TelegramLauncher/TelegramLauncher.csproj package --outdated --includ
 - Перед коммитом: `gitleaks detect --source . --verbose` (или pre-commit hook).
 - Секреты прокси MTProto — это данные пользователя/источников, не хранить в репозитории.
 
-### Pre-commit hook (gitleaks)
+### Git hooks
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-На Windows hook ищет `gitleaks` в PATH или `%LOCALAPPDATA%\gitleaks\gitleaks.exe`.
+**pre-commit** — сканирование секретов через gitleaks. На Windows hook ищет `gitleaks` в PATH или `%LOCALAPPDATA%\gitleaks\gitleaks.exe`.
+
+**post-commit** — удаляет артефакты сборки старше 7 дней (`bin/`, `obj/`, `.vs/`, `release/`, `*.user`, `*.pdb`, `*.cache`, `*.tmp`). Свежие артефакты (например, только что собранный `publish/`) не трогаются.
+
+Ручная очистка:
+
+```bash
+.githooks/clean-build-artifacts.sh
+```
 
 ## Безопасность кода
 

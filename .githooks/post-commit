@@ -1,0 +1,6 @@
+#!/bin/sh
+# Install: git config core.hooksPath .githooks
+# Cleans build artifacts older than 7 days after each commit.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+"$SCRIPT_DIR/clean-build-artifacts.sh"

@@ -1,6 +1,7 @@
 bin/
 obj/
 .vs/
+release/
 *.user
 *.suo
 *.pdb
